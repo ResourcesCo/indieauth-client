@@ -1,0 +1,18 @@
+<!doctype html>
+<html charset="en">
+  <head>
+    <title>IndieAuth sign-in example</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
+  </head>
+  <body>
+    <h1>IndieAuth sign-in example</h1>
+    <main>
+      <form action="/auth/indieauth" method="post">
+        <label for="url"></label>
+        <input type="text" name="url" id="url">
+        <input type="submit" value="Sign In">
+        <input type="hidden" name="csrf_token" value="{csrfToken}">
+      </form>
+    </main>
+  </body>
+</html>
