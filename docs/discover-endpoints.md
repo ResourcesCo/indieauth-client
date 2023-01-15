@@ -2,6 +2,10 @@
 
 For IndieAuth to allow you to sign in with your own website, it needs to make a request to a place specified by your website. This can be sent in the header or in the HTML as a meta tag. Sending it in the header is preferred.
 
+## Discovering endpoints from headers
+
+[`docs/discover-endpoints/package.json`](https://macchiato.dev/code)
+
 ```json
 {
   "name": "discover-endpoints",
@@ -9,15 +13,13 @@ For IndieAuth to allow you to sign in with your own website, it needs to make a 
   "private": true,
   "module": true,
   "description": "Discover endpoints for IndieAuth",
-  "scripts": {
-    "start": "tsx app.ts"
-  },
   "license": "MIT",
   "devDependencies": {
     "tsx": "^3.12.1"
   },
   "dependencies": {
-    
+    "htmlparser2": "^8.0.1",
+    "http-link-header": "^1.1.0"
   }
 }
 ```
@@ -36,7 +38,7 @@ The header will be read using [http-link-header](https://github.com/jhermsmeier/
 
 If it can't get the links from the headers, a request will be made to the GET endpoint, and both the headers and the response body will be checked for the links. It will only check the response body if it is HTML.
 
-[`docs/step2/get_links_from_headers.ts`](https://macchiato.dev/code)
+[`docs/discover-endpoints/get_links_from_headers.ts`](https://macchiato.dev/code)
 
 ```ts
 import LinkHeader from 'http-link-header'
@@ -69,7 +71,7 @@ export default async function getLinkFromHeader(
 }
 ```
 
-[`docs/step2/run_get_links_from_headers.ts`](https://macchiato.dev/code)
+[`docs/discover-endpoints/run_get_links_from_headers.ts`](https://macchiato.dev/code)
 
 ```ts
 import getLinksFromHeaders from './get_links_from_headers'
@@ -85,3 +87,65 @@ async function run() {
 
 run().catch(e => console.error(e))
 ```
+
+To run:
+
+```
+pnpm tsx run_get_links_from_headers.ts
+```
+
+## Discovering endpoints from HTML
+
+To read link tags from HTML, we'll use htmlparser2, and look at open tags for link elements.
+
+[`docs/step2/get_link_from_html.ts`](https://macchiato.dev/code)
+
+```ts
+import { Parser } from 'htmlparser2'
+
+export default function getLinkFromHtml(
+  html: string,
+  rel: string
+): Promise<string | undefined> {
+  return new Promise((resolve, reject) => {
+    let done = false
+    const onopentag = (tag: string, attrs: {[key: string]: any}) => {
+      if (!done && tag === 'link' && attrs['rel'] === rel) {
+        done = true
+        resolve(typeof attrs['href'] === 'string' ? attrs['href'] : undefined)
+      }
+    }
+    const onend = () => {
+      if (!done) resolve(undefined)
+    }
+    const parser = new Parser({onopentag, onend})
+    parser.write(html)
+    parser.end()
+  })
+}
+```
+
+[`docs/step2/get_link_from_html_example.ts`](https://macchiato.dev/code)
+
+```ts
+import getLinkFromHtml from './get_link_from_html'
+
+const html = `<!doctype html>
+<html>
+  <head>
+    <title>Test</title>
+    <link rel="authorization_endpoint" href="https://example.com/wp-json/indieauth/1.0/auth">
+  </head>
+  <body>
+    <h1>Test</h1>
+  </body>
+</html>`
+
+async function example() {
+  const result = await getLinkFromHtml(html, 'authorization_endpoint')
+  assertEquals(result, 'https://example.com/wp-json/indieauth/1.0/auth')
+})
+
+example().catch(e => console.error(e))
+```
+
