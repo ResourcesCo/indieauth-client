@@ -1,5 +1,11 @@
 # Step 2: Discover Endpoints
 
+[`download`](https://macchiato.dev/download)
+
+```json
+{}
+```
+
 For IndieAuth to allow you to sign in with your own website, it needs to make a request to a place specified by your website. This can be sent in the header or in the HTML as a meta tag. Sending it in the header is preferred.
 
 ## Discovering endpoints from headers
@@ -13,13 +19,16 @@ For IndieAuth to allow you to sign in with your own website, it needs to make a 
   "private": true,
   "module": true,
   "description": "Discover endpoints for IndieAuth",
+  "scripts": {
+    "start": "tsx app.ts"
+  },
   "license": "MIT",
   "devDependencies": {
     "tsx": "^3.12.1"
   },
   "dependencies": {
-    "htmlparser2": "^8.0.1",
-    "http-link-header": "^1.1.0"
+    "http-link-header": "^1.1.0",
+    "parse5-sax-parser": "^7.0.0"
   }
 }
 ```
@@ -98,10 +107,10 @@ pnpm tsx run_get_links_from_headers.ts
 
 To read link tags from HTML, we'll use htmlparser2, and look at open tags for link elements.
 
-[`docs/step2/get_link_from_html.ts`](https://macchiato.dev/code)
+[`docs/discover-endpoints/get_link_from_html.ts`](https://macchiato.dev/code)
 
 ```ts
-import { Parser } from 'htmlparser2'
+import { SAXParser } from 'parse5-sax-parser'
 
 export default function getLinkFromHtml(
   html: string,
@@ -118,7 +127,8 @@ export default function getLinkFromHtml(
     const onend = () => {
       if (!done) resolve(undefined)
     }
-    const parser = new Parser({onopentag, onend})
+    const parser = new SAXParser()
+    parser.on
     parser.write(html)
     parser.end()
   })
@@ -149,3 +159,4 @@ async function example() {
 example().catch(e => console.error(e))
 ```
 
+[`docs/step2/get_link_from_html_example.css`](https://macchiato.dev/code)
