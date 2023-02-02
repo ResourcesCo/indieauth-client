@@ -1,4 +1,4 @@
-# Step 2: Discover Endpoints
+# Discover Endpoints
 
 [`download`](https://macchiato.dev/download)
 
@@ -6,11 +6,21 @@
 {}
 ```
 
-For IndieAuth to allow you to sign in with your own website, it needs to make a request to a place specified by your website. This can be sent in the header or in the HTML as a meta tag. Sending it in the header is preferred.
+For IndieAuth to allow you to sign in with your own website, it needs to make a request to a place specified by your website.
+
+It uses a `Link` header or a `<link rel=>` html element. Sending it in the header is preferred.
+
+From the Profile URL, it first tries to get the `indieauth-metadata` URL. This can be the same page as the Profile URL. If it doesn't find the `indieauth-metadata` it uses the Profile URL as the `indieauth-metadata` page.
+
+It then gets the `indieauth-metadata` page and it uses that page to get the `authorization_endpoint` and the `token_endpoint`.
+
+## Dependencies
+
+To get endpoints from the headers, it uses `http-link-header`. To get endpoints from the HTML, it uses `parse5-sax-parser`. This is the example `package.json`. These dependencies will be included in the `package.json` for the library.
 
 ## Discovering endpoints from headers
 
-[`docs/discover-endpoints/package.json`](https://macchiato.dev/code)
+[`examples/discover-endpoints/package.json`](https://macchiato.dev/code)
 
 ```json
 {
@@ -40,19 +50,16 @@ To attempt to get it from the HTTP headers, a HEAD request will be made. These a
 third-party web servers, so a User Agent will need to be sent, since some
 will reject requests without a User Agent. Not only that, some will reject all
 that aren't coming from the browser, so using the same User Agent a browser would
-use is something to consider. This will default to NodeIndieAuthClient as the user agent
-and allow it to be overridden.
+use is something to consider. This will default to `NodeIndieAuthClient` as the user agent and allow it to be overridden.
 
 The header will be read using [http-link-header](https://github.com/jhermsmeier/node-http-link-header).
 
 If it can't get the links from the headers, a request will be made to the GET endpoint, and both the headers and the response body will be checked for the links. It will only check the response body if it is HTML.
 
-[`docs/discover-endpoints/get_links_from_headers.ts`](https://macchiato.dev/code)
+[`src/get-header-links.ts`](https://macchiato.dev/code)
 
 ```ts
 import LinkHeader from 'http-link-header'
-
-const linkRegexp = /^<([^>]*)>(.*)$/
 
 export function linksFromHeaders(
   headers: Headers,
@@ -63,7 +70,7 @@ export function linksFromHeaders(
   }
 }
 
-export default async function getLinkFromHeader(
+export async function getHeaderLinks(
   url: string,
   rel: string,
   userAgent = 'NodeIndieAuthClient'
@@ -72,7 +79,7 @@ export default async function getLinkFromHeader(
     method: 'HEAD',
     headers: {
       'User-Agent': userAgent,
-    }
+    },
   })
   if (resp.ok) {
     return linksFromHeaders(resp.headers, rel)
@@ -80,15 +87,17 @@ export default async function getLinkFromHeader(
 }
 ```
 
-[`docs/discover-endpoints/run_get_links_from_headers.ts`](https://macchiato.dev/code)
+[`examples/discover-endpoints/header-links-example.ts`](https://macchiato.dev/code)
 
 ```ts
-import getLinksFromHeaders from './get_links_from_headers'
+import { getHeaderLinks } from '../../src/get-header-links.ts'
 
 async function run() {
-  const [url, rel] = process.argv.slice(2)
-  if (![url, rel].every(a => typeof a === 'string' && a.length > 0)) {
-    throw new Error('Usage: $0 <url> <rel>')
+  let url = process.argv[2]
+  try {
+    new URL(url)
+  } catch {
+    throw new Error('Usage: $0 <url>')    
   }
   const result = await getLinksFromHeaders(url, rel)
   console.log(result)
@@ -100,21 +109,21 @@ run().catch(e => console.error(e))
 To run:
 
 ```
-pnpm tsx run_get_links_from_headers.ts
+pnpm tsx header-links-example.ts <url>
 ```
 
 ## Discovering endpoints from HTML
 
 To read link tags from HTML, we'll use htmlparser2, and look at open tags for link elements.
 
-[`docs/discover-endpoints/get_link_from_html.ts`](https://macchiato.dev/code)
+[`src/get-html-links.ts`](https://macchiato.dev/code)
 
 ```ts
 import { SAXParser } from 'parse5-sax-parser'
 
-export default function getLinkFromHtml(
+export function getHtmlLinks(
   html: string,
-  rel: string
+  rel: string[]
 ): Promise<string | undefined> {
   return new Promise((resolve, reject) => {
     let done = false
@@ -135,7 +144,7 @@ export default function getLinkFromHtml(
 }
 ```
 
-[`docs/step2/get_link_from_html_example.ts`](https://macchiato.dev/code)
+[`examples/discover-endpoints/html-links-example.ts`](https://macchiato.dev/code)
 
 ```ts
 import getLinkFromHtml from './get_link_from_html'
@@ -159,4 +168,9 @@ async function example() {
 example().catch(e => console.error(e))
 ```
 
-[`docs/step2/get_link_from_html_example.css`](https://macchiato.dev/code)
+To run:
+
+```
+pnpm tsx html-links-example.ts <url>
+```
+

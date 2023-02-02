@@ -30,17 +30,23 @@ sequenceDiagram
     }
     await delay(10)
   }
+  const outputEl = document.querySelector('#output')
+  const introText = 'Hover over the actions to view the text here. Click to open the relevant page.'
+  outputEl.innerText = introText
   for (const el of document.querySelectorAll('text')) {
     el.addEventListener('mouseenter', () => {
       el.style.fill = 'yellow'
       el.style.cursor = 'pointer'
+      outputEl.innerText = el.textContent
     })
     el.addEventListener('mouseleave', () => {
       el.style.fill = ''
+      outputEl.innerText = introText
     })
     el.addEventListener('click', () => {
-      document.querySelector('#output').innerText = el.textContent
-      notebookClient.navigate('step-2-get-authorization-endpoint.md')
+      if (/ProfileUrl/.test(el.textContent)) {
+        notebookClient.navigate('submit-profile-url.md')
+      }
     })
   }
 })()
@@ -50,7 +56,7 @@ sequenceDiagram
 
 ```html
 <div id="output" style="padding: 5px;">
-  Click the actions to view details.
+  
 </div>
 ```
 

@@ -1,5 +1,5 @@
 {
-  "name": "login-form",
+  "name": "example-submit-profile-url",
   "version": "1.0.0",
   "private": true,
   "module": true,
@@ -12,7 +12,6 @@
     "tsx": "^3.12.1"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "express-async-handler": "^1.2.0"
+    "express": "^4.18.2"
   }
 }
