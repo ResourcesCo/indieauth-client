@@ -10,15 +10,13 @@ For IndieAuth to allow you to sign in with your own website, it needs to make a 
 
 It uses a `Link` header or a `<link rel=>` html element. Sending it in the header is preferred.
 
-From the Profile URL, it first tries to get the `indieauth-metadata` URL. This can be the same page as the Profile URL. If it doesn't find the `indieauth-metadata` it uses the Profile URL as the `indieauth-metadata` page.
+From the Profile URL, it first tries to get the `indieauth-metadata` URL. This can be the same page as the Profile URL. If it doesn't find the `indieauth-metadata` it gets `authorization_endpoint` and `token_endpoint` from the profile's header or HTML.
 
-It then gets the `indieauth-metadata` page and it uses that page to get the `authorization_endpoint` and the `token_endpoint`.
+If it does find the `indieauth-metadata` URL, it downloads JSON from it and gets the the `authorization_endpoint` and the `token_endpoint` as top-level values from the JSON - or rather, just returns them directly.
 
 ## Dependencies
 
 To get endpoints from the headers, it uses `http-link-header`. To get endpoints from the HTML, it uses `parse5-sax-parser`. This is the example `package.json`. These dependencies will be included in the `package.json` for the library.
-
-## Discovering endpoints from headers
 
 [`examples/discover-endpoints/package.json`](https://macchiato.dev/code)
 
@@ -27,7 +25,7 @@ To get endpoints from the headers, it uses `http-link-header`. To get endpoints 
   "name": "discover-endpoints",
   "version": "1.0.0",
   "private": true,
-  "module": true,
+  "type": "module",
   "description": "Discover endpoints for IndieAuth",
   "scripts": {
     "start": "tsx app.ts"
@@ -42,6 +40,8 @@ To get endpoints from the headers, it uses `http-link-header`. To get endpoints 
   }
 }
 ```
+
+## Discovering endpoints from headers
 
 The `authorization_endpoint` `link` `rel` needs to be retrieved from the HTTP
 headers or from the HTML at the location provided in the form. This function will also support getting other keys besides "authorization_endpoint".
@@ -66,23 +66,30 @@ export function linksFromHeaders(
 ): {[key: string]: string} {
   const link = headers.get('link')
   if (link) {
-    return LinkHeader.parse(link)
+    const results = LinkHeader.parse(link).refs
+    const links: {[key: string]: string} = {}
+    for (const result of results) {
+      if (!(result.rel in links)) {
+        links[result.rel] = result.uri
+      }
+    }
+    return links
   }
 }
 
 export async function getHeaderLinks(
   url: string,
-  rel: string,
   userAgent = 'NodeIndieAuthClient'
 ): Promise<string | undefined> {
-  const resp = await fetch(url, {
+  const res = await fetch(url, {
     method: 'HEAD',
     headers: {
       'User-Agent': userAgent,
     },
+    redirect: 'follow',
   })
-  if (resp.ok) {
-    return linksFromHeaders(resp.headers, rel)
+  if (res.ok) {
+    return linksFromHeaders(res.headers)
   }
 }
 ```
@@ -90,16 +97,16 @@ export async function getHeaderLinks(
 [`examples/discover-endpoints/header-links-example.ts`](https://macchiato.dev/code)
 
 ```ts
-import { getHeaderLinks } from '../../src/get-header-links.ts'
+import { getHeaderLinks } from '../../src/get-header-links'
 
 async function run() {
   let url = process.argv[2]
   try {
     new URL(url)
   } catch {
-    throw new Error('Usage: $0 <url>')    
+    throw new Error('Usage: $0 <url>')
   }
-  const result = await getLinksFromHeaders(url, rel)
+  const result = await getHeaderLinks(url)
   console.log(result)
 }
 
@@ -114,7 +121,11 @@ pnpm tsx header-links-example.ts <url>
 
 ## Discovering endpoints from HTML
 
-To read link tags from HTML, we'll use htmlparser2, and look at open tags for link elements.
+NOTE: This is not yet working/tested
+
+TODO: Get this working and add an example of an IndieAuth server that doesn't have the links in the header.
+
+To read link tags from HTML, we'll use [parse5-sax-parser](https://www.npmjs.com/package/parse5-sax-parser), and look at open tags for link elements. The first one found is used and the rest are ignored.
 
 [`src/get-html-links.ts`](https://macchiato.dev/code)
 
@@ -174,3 +185,61 @@ To run:
 pnpm tsx html-links-example.ts <url>
 ```
 
+## Discover Endpoints function
+
+This is the overall discover function that uses the components to return the `authorization_endpoint`, `token_endpoint`, and `code_challenge_methods_supported`, as well as any others found.
+
+[`src/discover-endpoints.ts`](https://macchiato.dev/code)
+
+```ts
+import { getHeaderLinks } from './get-header-links'
+
+export async function discoverEndpoints(
+  url: string,
+  userAgent = 'NodeIndieAuthClient'
+): Promise<string | undefined> {
+  const links = await getHeaderLinks(url, userAgent)
+  if (typeof links === 'object' && links !== null) {
+    if ('indieauth-metadata' in links) {
+      const res = await fetch(links['indieauth-metadata'], {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': userAgent,
+        },
+        redirect: 'follow',
+      })
+      if (res.ok) {
+        return await res.json()
+      }
+    } else {
+      return links
+    }
+  }
+}
+```
+
+[`examples/discover-endpoints/discover-endpoints-example.ts`](https://macchiato.dev/code)
+
+```ts
+import { discoverEndpoints } from '../../src/discover-endpoints'
+
+async function run() {
+  let url = process.argv[2]
+  try {
+    new URL(url)
+  } catch {
+    throw new Error('Usage: $0 <url>')
+  }
+  const result = await discoverEndpoints(url)
+  console.log(result)
+}
+
+run().catch(e => console.error(e))
+```
+
+To run:
+
+```
+pnpm tsx discover-endpoints-example.ts <url>
+```

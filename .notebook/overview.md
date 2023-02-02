@@ -46,6 +46,8 @@ sequenceDiagram
     el.addEventListener('click', () => {
       if (/ProfileUrl/.test(el.textContent)) {
         notebookClient.navigate('submit-profile-url.md')
+      } else if (/discovers/.test(el.textContent)) {
+        notebookClient.navigate('discover-endpoints.md')
       }
     })
   }
