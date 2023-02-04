@@ -48,6 +48,8 @@ sequenceDiagram
         notebookClient.navigate('submit-profile-url.md')
       } else if (/discovers/.test(el.textContent)) {
         notebookClient.navigate('discover-endpoints.md')
+      } else if (/constructs auth|to authorization|client info/.test(el.textContent)) {
+        notebookClient.navigate('auth.md')
       }
     })
   }
