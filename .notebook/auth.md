@@ -141,7 +141,7 @@ This will only be accessible if it is running on a publicly accessible location.
 
 This example starts is based on code from the `start.md` page.
 
-[`examples/express/package.json`](https://macchiato.dev/code)
+[`examples/auth-redirect/package.json`](https://macchiato.dev/code)
 
 ```json
 {
@@ -163,7 +163,7 @@ This example starts is based on code from the `start.md` page.
 }
 ```
 
-[`examples/express/login.html`](https://macchiato.dev/code)
+[`examples/auth-redirect/login.html`](https://macchiato.dev/code)
 
 ```html
 <!doctype html>
@@ -189,7 +189,7 @@ This example starts is based on code from the `start.md` page.
 </html>
 ```
 
-[`examples/express/app.ts`](https://macchiato.dev/code)
+[`examples/auth-redirect/app.ts`](https://macchiato.dev/code)
 
 ```ts
 import { readFile } from 'node:fs/promises'
