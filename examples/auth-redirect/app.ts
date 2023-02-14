@@ -1,74 +1,3 @@
-# Session
-
-[`download`](https://macchiato.dev/download)
-
-```json
-{}
-```
-
-In this step we'll request a token, store it, show profile information when logged in, and provide a logout button. This will also be the first full example, called `express`.
-
-## Callback
-
-The callback will accept the redirect from the authorization server, authenticate it, and redirect to the app to create the session.
-
-## Example
-
-This example starts is based on code from the `start.md` page.
-
-In `beginAuth` before the redirect it will set a signed cookie for the profile URL and the state. It will then use these to authenticate the callback. Upon receiving the callback it will acquire and set the token and redirect with a new cookie to store the token. In an app with a database it may store a session key and store the token in the database.
-
-[`examples/express/package.json`](https://macchiato.dev/code)
-
-```json
-{
-  "name": "example-express",
-  "version": "1.0.0",
-  "private": true,
-  "module": true,
-  "description": "Example IndieAuth login w/ Express",
-  "scripts": {
-    "start": "tsx app.ts"
-  },
-  "license": "MIT",
-  "devDependencies": {
-    "tsx": "^3.12.1"
-  },
-  "dependencies": {
-    "express": "^4.18.2"
-  }
-}
-```
-
-[`examples/express/login.html`](https://macchiato.dev/code)
-
-```html
-<!doctype html>
-<html charset="en">
-  <head>
-    <title>IndieAuth sign-in example</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
-  </head>
-  <body>
-    <div class="h-app">
-      <img src="/logo.png" class="u-logo">
-      <a href="/" class="u-url p-name">IndieAuth Client Example</a>
-    </div>
-    <main>
-      <form action="/auth/indieauth" method="post">
-        <label for="url"></label>
-        <input type="text" name="url" id="url">
-        <input type="submit" value="Sign In">
-        <input type="hidden" name="csrf_token" value="{csrfToken}">
-      </form>
-    </main>
-  </body>
-</html>
-```
-
-[`examples/express/app.ts`](https://macchiato.dev/code)
-
-```ts
 import { readFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -151,23 +80,6 @@ async function run() {
     }
   })
 
-  async function handleCallback(req, res) {
-    console.log({
-      code: req.query.code,
-      state: req.query.state,
-      iss: req.query.iss,
-    })
-    res.redirect('/')
-  }
-
-  app.get('/auth/callback', async (req, res, next) => {
-    try {
-      await handleCallback(req, res)
-    } catch (e) {
-      next(e)
-    }
-  })
-
   //app.get('/logo.png', async (req, res, next) => {
   //  const image = 
   //})
@@ -180,4 +92,3 @@ async function run() {
 run().catch(err => {
   console.error(err)
 })
-```

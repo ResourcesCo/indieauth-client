@@ -50,6 +50,8 @@ sequenceDiagram
         notebookClient.navigate('discover-endpoints.md')
       } else if (/constructs auth|to authorization|client info/.test(el.textContent)) {
         notebookClient.navigate('auth.md')
+      } else {
+        notebookClient.navigate('session.md')
       }
     })
   }
@@ -72,3 +74,5 @@ svg .messageText {
   stroke: #000;
 }
 ```
+
+[IndieAuth Spec](https://indieauth.spec.indieweb.org/)

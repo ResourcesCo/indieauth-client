@@ -1,9 +1,9 @@
 {
-  "name": "example-express",
+  "name": "example-submit-profile-url",
   "version": "1.0.0",
   "private": true,
   "module": true,
-  "description": "Example IndieAuth login w/ Express",
+  "description": "Example login form",
   "scripts": {
     "start": "tsx app.ts"
   },

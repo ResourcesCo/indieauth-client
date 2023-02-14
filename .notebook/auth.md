@@ -145,7 +145,7 @@ This example starts is based on code from the `start.md` page.
 
 ```json
 {
-  "name": "example-submit-profile-url",
+  "name": "example-auth-redirect",
   "version": "1.0.0",
   "private": true,
   "module": true,

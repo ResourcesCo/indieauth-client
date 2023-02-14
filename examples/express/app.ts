@@ -80,6 +80,23 @@ async function run() {
     }
   })
 
+  async function handleCallback(req, res) {
+    console.log({
+      code: req.query.code,
+      state: req.query.state,
+      iss: req.query.iss,
+    })
+    res.redirect('/')
+  }
+
+  app.get('/auth/callback', async (req, res, next) => {
+    try {
+      await handleCallback(req, res)
+    } catch (e) {
+      next(e)
+    }
+  })
+
   //app.get('/logo.png', async (req, res, next) => {
   //  const image = 
   //})
