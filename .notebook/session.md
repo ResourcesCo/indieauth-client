@@ -35,6 +35,7 @@ In `beginAuth` before the redirect it will set a signed cookie for the profile U
     "tsx": "^3.12.1"
   },
   "dependencies": {
+    "cookie-parser": "^1.4.6",
     "express": "^4.18.2"
   }
 }
@@ -73,7 +74,10 @@ import { readFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import express from 'express'
-import { importKey, makeCsrfToken, verifyCsrfToken } from '../../src/sign'
+import cookieParser from 'cookie-parser'
+import {
+  importKey, makeCsrfToken, verifyCsrfToken, signText, verifyText
+} from '../../src/sign'
 import { discoverEndpoints } from '../../src/discover-endpoints.ts'
 import { generateCodeVerifier, getCodeChallenge } from '../../src/code-challenge'
 import { randomToken } from '../../src/random-token'
@@ -97,6 +101,7 @@ async function run() {
   const expiresIn = 5 * 60 * 1000
 
   app.use(express.urlencoded({ extended: true }))
+  app.use(cookieParser())
 
   app.get('/', async (req, res, next) => {
     try {
@@ -140,6 +145,10 @@ async function run() {
       codeChallenge,
       me: url,
     })
+    const cookieOpts = { expires: new Date(Date.now() + 300000), httpOnly: true }
+    res.cookie('indieauth-me', await signText(key, url), cookieOpts)
+    res.cookie('indieauth-state', await signText(key, state), cookieOpts)
+    res.cookie('indieauth-code-verifier', await signText(key, codeVerifier), cookieOpts)
     res.redirect(loginUrl)
   }
 
@@ -152,11 +161,21 @@ async function run() {
   })
 
   async function handleCallback(req, res) {
+    const profileUrl = await verifyText(key, req.cookies['indieauth-me'])
+    const state = await verifyText(key, req.cookies['indieauth-state'])
+    const codeVerifier = await verifyText(key, req.cookies['indieauth-code-verifier'])
     console.log({
       code: req.query.code,
       state: req.query.state,
       iss: req.query.iss,
+      cookieState: state,
+      profileUrl,
+      codeVerifier,
     })
+    if (state !== req.query.state) {
+      throw new Error('state parameter must match')
+    }
+    // get the token
     res.redirect('/')
   }
 
