@@ -106,7 +106,7 @@ The timeout is set to only 10 seconds so you can easily make it fail by waiting.
 The sign-in form has a field for the URL and a hidden
 [CSRF token](https://laravel.com/docs/8.x/csrf).
 
-[`example/submit-profile-url/package.json`](https://macchiato.dev/code)
+[`examples/submit-profile-url/package.json`](https://macchiato.dev/code)
 
 ```json
 {
@@ -128,7 +128,7 @@ The sign-in form has a field for the URL and a hidden
 }
 ```
 
-[`example/submit-profile-url/login.html`](https://macchiato.dev/code)
+[`examples/submit-profile-url/login.html`](https://macchiato.dev/code)
 
 ```html
 <!doctype html>

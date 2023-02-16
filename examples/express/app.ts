@@ -4,12 +4,19 @@ import { fileURLToPath } from 'node:url'
 import express from 'express'
 import cookieParser from 'cookie-parser'
 import {
-  importKey, makeCsrfToken, verifyCsrfToken, signText, verifyText
-} from '../../src/sign'
-import { discoverEndpoints } from '../../src/discover-endpoints.ts'
-import { generateCodeVerifier, getCodeChallenge } from '../../src/code-challenge'
-import { randomToken } from '../../src/random-token'
-import { buildLoginUrl } from '../../src/login-redirect-url'
+  importKey,
+  makeCsrfToken,
+  verifyCsrfToken,
+  signText,
+  verifyText,
+  discoverEndpoints,
+  generateCodeVerifier,
+  getCodeChallenge,
+  randomToken,
+  buildLoginUrl,
+  checkParameters,
+  redeemCode
+} from '../../'
 
 const secretKey = process.env.SECRET_KEY as string
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -24,6 +31,9 @@ async function run() {
   const loginFile = resolve(__dirname, 'login.html')
   const loginHtml = await readFile(loginFile, 'utf8')
   const baseUrl = process.env.BASE_URL || `http://localhost:${port}`
+  const clientId = `${baseUrl}/`
+  const redirectUrl = `${baseUrl}/auth/callback`
+  const scope = process.env.SCOPE
 
   const key = await importKey(secretKey)
   const expiresIn = 5 * 60 * 1000
@@ -31,12 +41,32 @@ async function run() {
   app.use(express.urlencoded({ extended: true }))
   app.use(cookieParser())
 
+  async function getCookieData(req) {
+    const cookie = req.cookies['session-data']
+    if (typeof cookie === 'string') {
+      const data = JSON.parse(await verifyText(key, cookie))
+      return {loggedIn: true, ...data}
+    } else {
+      return {loggedIn: false}
+    }
+  }
+
+  async function home(req, res) {
+    const csrfToken = await makeCsrfToken(key)
+    const {loggedIn, me} = await getCookieData(req)
+    const html = (
+      loginHtml
+      .replace('{csrfToken}', csrfToken)
+      .replace('{bodyClass}', loggedIn ? 'loggedIn' : 'loggedOut')
+      .replace('{me}', me)
+    )
+    res.set('content-type', 'text/html')
+    res.send(html)
+  }
+
   app.get('/', async (req, res, next) => {
     try {
-      const csrfToken = await makeCsrfToken(key)
-      const html = loginHtml.replace('{csrfToken}', csrfToken)
-      res.set('content-type', 'text/html')
-      res.send(html)
+      await home(req, res)
     } catch (e) {
       next(e)
     }
@@ -66,17 +96,18 @@ async function run() {
     const codeVerifier = generateCodeVerifier()
     const codeChallenge = await getCodeChallenge(codeVerifier)
     const loginUrl = await buildLoginUrl({
-      clientId: baseUrl,
+      clientId,
       authorizationEndpoint: metadata.authorization_endpoint,
-      redirectUrl: `${baseUrl}/auth/callback`,
+      redirectUrl,
       state,
       codeChallenge,
       me: url,
+      ...(scope ? {scope} : {}),
     })
     const cookieOpts = { expires: new Date(Date.now() + 300000), httpOnly: true }
-    res.cookie('indieauth-me', await signText(key, url), cookieOpts)
-    res.cookie('indieauth-state', await signText(key, state), cookieOpts)
-    res.cookie('indieauth-code-verifier', await signText(key, codeVerifier), cookieOpts)
+    const iss = metadata['iss']
+    const data = JSON.stringify({me: url, state, codeVerifier, metadata})
+    res.cookie('indieauth-data', await signText(key, data), cookieOpts)
     res.redirect(loginUrl)
   }
 
@@ -89,17 +120,15 @@ async function run() {
   })
 
   async function handleCallback(req, res) {
-    const profileUrl = await verifyText(key, req.cookies['indieauth-me'])
-    const state = await verifyText(key, req.cookies['indieauth-state'])
-    const codeVerifier = await verifyText(key, req.cookies['indieauth-code-verifier'])
-    console.log({
-      code: req.query.code,
-      state: req.query.state,
-      iss: req.query.iss,
-      cookieState: state,
-      profileUrl,
-      codeVerifier,
+    const data = JSON.parse(await verifyText(key, req.cookies['indieauth-data']))
+    checkParameters(req.query, data.metadata, data.state)
+    const codeVerifier = data.codeVerifier
+    const sessionData = await redeemCode({
+      query: req.query, metadata: data.metadata, clientId, redirectUrl, codeVerifier
     })
+    const cookieOpts = { expires: new Date(Date.now() + 300000), httpOnly: true }
+    console.log(JSON.stringify(sessionData, null, 2))
+    res.cookie('session-data', await signText(key, JSON.stringify(sessionData)))
     res.redirect('/')
   }
 

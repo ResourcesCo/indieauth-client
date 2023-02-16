@@ -3,19 +3,26 @@
   <head>
     <title>IndieAuth sign-in example</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
+    <style type="text/css">
+      body.loggedIn .login { display: none; }
+      body.loggedOut .info { display: none; }
+    </style>
   </head>
-  <body>
+  <body class="{bodyClass}">
     <div class="h-app">
       <img src="/logo.png" class="u-logo">
       <a href="/" class="u-url p-name">IndieAuth Client Example</a>
     </div>
     <main>
-      <form action="/auth/indieauth" method="post">
+      <form class="login" action="/auth/indieauth" method="post">
         <label for="url"></label>
         <input type="text" name="url" id="url">
         <input type="submit" value="Sign In">
         <input type="hidden" name="csrf_token" value="{csrfToken}">
       </form>
+      <div class="info">
+        Logged in as: {me}
+      </div>
     </main>
   </body>
 </html>

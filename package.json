@@ -1,18 +1,20 @@
 {
-  "name": "discover-endpoints",
+  "name": "@resources/indieauth-client",
   "version": "1.0.0",
-  "private": true,
   "type": "module",
-  "description": "Discover endpoints for IndieAuth",
+  "main": "./dist/index.js",
+  "description": "functions for adding indieauth support",
+  "repository": "gitlab:ResourcesCo/indieauth-client",
   "scripts": {
-    "start": "tsx app.ts"
+    "start": "tsx app.ts",
+    "build": "esbuild --bundle --platform=node --packages=external --format=esm --outdir=dist src/index.ts"
   },
   "license": "MIT",
   "devDependencies": {
+    "esbuild": "^0.17.8",
     "tsx": "^3.12.1"
   },
   "dependencies": {
-    "http-link-header": "^1.1.0",
-    "parse5-sax-parser": "^7.0.0"
+    "http-link-header": "^1.1.0"
   }
 }
